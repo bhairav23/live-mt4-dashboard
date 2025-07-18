@@ -54,11 +54,9 @@ void OnTimer()
             {
                double lots = OrderLots();
                double price = OrderOpenPrice();
-               double market_price = (type == OP_BUY) ? MarketInfo(ord_sym, MODE_BID) : MarketInfo(ord_sym, MODE_ASK);
 
-               double order_pnl = (type == OP_BUY) ?
-                                  (market_price - price) * lots * MarketInfo(ord_sym, MODE_TICKVALUE) / MarketInfo(ord_sym, MODE_TICKSIZE) :
-                                  (price - market_price) * lots * MarketInfo(ord_sym, MODE_TICKVALUE) / MarketInfo(ord_sym, MODE_TICKSIZE);
+               // ✅ New correct net PnL calculation:
+               double order_pnl = OrderProfit() + OrderCommission() + OrderSwap();
 
                pnl += order_pnl;
 
@@ -84,23 +82,14 @@ void OnTimer()
       string be_price_str = "\"N/A\"";
       if (sym != "All" && total_lots > 0)
       {
-         double be_price = 0.0;
          double net_lots = buy_lots - sell_lots;
 
          if (MathAbs(net_lots) > 0.00001)
          {
-            // Weighted average prices
             double avg_buy_price = (buy_lots > 0) ? (weighted_buy_price / buy_lots) : 0;
             double avg_sell_price = (sell_lots > 0) ? (weighted_sell_price / sell_lots) : 0;
 
-            double current_bid = MarketInfo(sym, MODE_BID);
-            double current_ask = MarketInfo(sym, MODE_ASK);
-
-            double price_diff = (avg_buy_price - avg_sell_price);
-
-            // Estimate BE price formula for mixed positions
-            be_price = (buy_lots * avg_buy_price + sell_lots * avg_sell_price) / total_lots;
-
+            double be_price = (buy_lots * avg_buy_price + sell_lots * avg_sell_price) / total_lots;
             be_price_str = DoubleToString(be_price, MarketInfo(sym, MODE_DIGITS));
          }
       }

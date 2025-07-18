@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Live MT4 Multi-Terminal Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        table { border-collapse: collapse; margin-bottom: 40px; width: 100%; max-width: 100%; }
+        th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
+        th { background-color: #f4f4f4; }
+        h2 { margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <h1>Live MT4 Multi-Terminal Dashboard</h1>
+    <div id="tables"></div>
+
+    <script>
+        async function fetchData() {
+            const response = await fetch('/data');
+            const data = await response.json();
+            renderTables(data);
+        }
+
+        function renderTables(data) {
+            const container = document.getElementById('tables');
+            container.innerHTML = '';
+
+            for (const [terminal, currencies] of Object.entries(data)) {
+                const title = document.createElement('h2');
+                title.textContent = terminal;
+                container.appendChild(title);
+
+                const table = document.createElement('table');
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th>Currency</th>
+                        <th>PnL</th>
+                        <th>BE Price</th>
+                        <th>Buy Lots</th>
+                        <th>Sell Lots</th>
+                        <th>Total Lots</th>
+                        <th>Buy Pos</th>
+                        <th>Sell Pos</th>
+                        <th>Total Pos</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                const tbody = document.createElement('tbody');
+
+                const sortedRows = Object.entries(currencies)
+                    .sort((a, b) => (b[1].pnl || 0) - (a[1].pnl || 0));  // Descending PnL sort
+
+                for (const [currency, details] of sortedRows) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${currency}</td>
+                        <td>${details.pnl !== undefined ? details.pnl.toFixed(2) : '0.00'}</td>
+                        <td>${details.be_price ?? 'N/A'}</td>
+                        <td>${details.buy_lots !== undefined ? details.buy_lots.toFixed(2) : '0.00'}</td>
+                        <td>${details.sell_lots !== undefined ? details.sell_lots.toFixed(2) : '0.00'}</td>
+                        <td>${details.total_lots !== undefined ? details.total_lots.toFixed(2) : '0.00'}</td>
+                        <td>${details.buy_pos ?? 0}</td>
+                        <td>${details.sell_pos ?? 0}</td>
+                        <td>${details.total_pos ?? 0}</td>
+                    `;
+                    tbody.appendChild(row);
+                }
+
+                table.appendChild(tbody);
+                container.appendChild(table);
+            }
+        }
+
+        fetchData();
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>

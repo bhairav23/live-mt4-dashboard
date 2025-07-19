@@ -1,81 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Live MT4 Multi-Terminal Dashboard</title>
-    <style>
-        body { font-family: sans-serif; margin: 20px; }
-        table { border-collapse: collapse; margin-bottom: 40px; width: 100%; max-width: 100%; }
-        th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: center; }
-        th { background-color: #f4f4f4; }
-        h2 { margin-top: 40px; }
-    </style>
+  <meta charset="UTF-8">
+  <title>MT4 Multi-Terminal Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- DataTables + Responsive CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.4.1/css/responsive.dataTables.min.css">
+
+  <!-- jQuery + DataTables scripts -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/responsive/2.4.1/js/dataTables.responsive.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      padding: 10px;
+      margin: 0;
+    }
+
+    h2 {
+      font-size: 20px;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    th, td {
+      text-align: left;
+      border: 1px solid #ddd;
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: #222;
+      color: white;
+      cursor: pointer;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    @media (max-width: 768px) {
+      th, td {
+        font-size: 12px;
+        padding: 6px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h1>Live MT4 Multi-Terminal Dashboard</h1>
-    <div id="tables"></div>
 
-    <script>
-        async function fetchData() {
-            const response = await fetch('/data');
-            const data = await response.json();
-            renderTables(data);
-        }
+  <h2>MT4 Multi-Terminal Dashboard</h2>
+  <div id="tables"></div>
 
-        function renderTables(data) {
-            const container = document.getElementById('tables');
-            container.innerHTML = '';
+  <script>
+    async function fetchData() {
+      const response = await fetch('/data');
+      const data = await response.json();
+      renderTables(data);
+    }
 
-            for (const [terminal, currencies] of Object.entries(data)) {
-                const title = document.createElement('h2');
-                title.textContent = terminal;
-                container.appendChild(title);
+    function renderTables(data) {
+      const container = document.getElementById('tables');
+      container.innerHTML = '';
 
-                const table = document.createElement('table');
-                const thead = document.createElement('thead');
-                thead.innerHTML = `
-                    <tr>
-                        <th>Currency</th>
-                        <th>PnL</th>
-                        <th>BE Price</th>
-                        <th>Buy Lots</th>
-                        <th>Sell Lots</th>
-                        <th>Total Lots</th>
-                        <th>Buy Pos</th>
-                        <th>Sell Pos</th>
-                        <th>Total Pos</th>
-                    </tr>
-                `;
-                table.appendChild(thead);
+      Object.entries(data).forEach(([terminal, currencies], index) => {
+        const tableId = `table-${index}`;
 
-                const tbody = document.createElement('tbody');
+        const title = document.createElement('h2');
+        title.textContent = terminal;
+        container.appendChild(title);
 
-                const sortedRows = Object.entries(currencies)
-                    .sort((a, b) => (b[1].pnl || 0) - (a[1].pnl || 0));  // Descending PnL sort
+        const tableHtml = `
+          <table id="${tableId}" class="display responsive nowrap">
+            <thead>
+              <tr>
+                <th>Currency</th>
+                <th>PnL</th>
+                <th>BE Price</th>
+                <th>Buy Lots</th>
+                <th>Sell Lots</th>
+                <th>Total Lots</th>
+                <th>Buy Pos</th>
+                <th>Sell Pos</th>
+                <th>Total Pos</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${Object.entries(currencies)
+                .sort((a, b) => (b[1].pnl || 0) - (a[1].pnl || 0))  // Sort by PnL descending
+                .map(([currency, d]) => `
+                  <tr>
+                    <td>${currency}</td>
+                    <td>${d.pnl !== undefined ? d.pnl.toFixed(2) : '0.00'}</td>
+                    <td>${d.be_price ?? 'N/A'}</td>
+                    <td>${d.buy_lots !== undefined ? d.buy_lots.toFixed(2) : '0.00'}</td>
+                    <td>${d.sell_lots !== undefined ? d.sell_lots.toFixed(2) : '0.00'}</td>
+                    <td>${d.total_lots !== undefined ? d.total_lots.toFixed(2) : '0.00'}</td>
+                    <td>${d.buy_pos ?? 0}</td>
+                    <td>${d.sell_pos ?? 0}</td>
+                    <td>${d.total_pos ?? 0}</td>
+                  </tr>
+                `).join('')}
+            </tbody>
+          </table>
+        `;
 
-                for (const [currency, details] of sortedRows) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${currency}</td>
-                        <td>${details.pnl !== undefined ? details.pnl.toFixed(2) : '0.00'}</td>
-                        <td>${details.be_price ?? 'N/A'}</td>
-                        <td>${details.buy_lots !== undefined ? details.buy_lots.toFixed(2) : '0.00'}</td>
-                        <td>${details.sell_lots !== undefined ? details.sell_lots.toFixed(2) : '0.00'}</td>
-                        <td>${details.total_lots !== undefined ? details.total_lots.toFixed(2) : '0.00'}</td>
-                        <td>${details.buy_pos ?? 0}</td>
-                        <td>${details.sell_pos ?? 0}</td>
-                        <td>${details.total_pos ?? 0}</td>
-                    `;
-                    tbody.appendChild(row);
-                }
+        container.insertAdjacentHTML('beforeend', tableHtml);
 
-                table.appendChild(tbody);
-                container.appendChild(table);
-            }
-        }
+        // Initialize DataTable with styling and responsiveness
+        $(`#${tableId}`).DataTable({
+          paging: false,
+          info: false,
+          searching: false,
+          responsive: true,
+          order: [[1, 'desc']],  // Default sort on PnL descending
+          scrollX: false
+        });
+      });
+    }
 
-        fetchData();
-        setInterval(fetchData, 5000);
-    </script>
+    fetchData();
+    setInterval(fetchData, 5000);
+  </script>
+
 </body>
 </html>
